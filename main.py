@@ -1,10 +1,14 @@
 import openai
 import os
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from pydantic import BaseModel
 
 load_dotenv()
 openai.api_key = os.getenv("OPENAI_API_KEY")
-#This function will extract useful info of incoming emails
+
+app = FastAPI()
+
 function_descriptions = [
     {
         "name": "extract_info_from_email",
@@ -41,3 +45,42 @@ function_descriptions = [
         }
     }
 ]
+
+class Email(BaseModel):
+    from_email: str
+    content: str
+
+@app.get("/")
+def read_root():
+    return {"Hello": "World"}
+
+@app.post("/")
+def analyse_email(email: Email):
+    content = email.content
+    query = f"Please extract key information from this email: {content} "
+
+    messages = [{"role": "user", "content": query}]
+
+    response = openai.ChatCompletion.create(
+        model="gpt-4-0613",
+        messages=messages,
+        functions = function_descriptions,
+        function_call="auto"
+    )
+
+    arguments = response.choices[0]["message"]["function_call"]["arguments"]
+    companyName = eval(arguments).get("companyName")
+    priority = eval(arguments).get("priority")
+    product = eval(arguments).get("product")
+    amount = eval(arguments).get("amount")
+    category = eval(arguments).get("category")
+    nextStep = eval(arguments).get("nextStep")
+
+    return {
+        "companyName": companyName,
+        "product": product,
+        "amount": amount,
+        "priority": priority,
+        "category": category,
+        "nextStep": nextStep
+    }
