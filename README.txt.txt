@@ -1,0 +1,1 @@
+This is a email system that uses GPT function calling to turn inbound emails into a list of prioritized high quality leads 
